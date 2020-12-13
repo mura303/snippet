@@ -1,5 +1,4 @@
-# https://medium.com/@ngbala6/audio-processing-and-remove-silence-using-python-a7fe1552007a
-# マイクから録音してVADしてVoiceだけのWavを保存
+# VoiceだけGoogleSpeechAPIに送ってTextにしつつWavも作る
 
 import collections
 import contextlib
@@ -7,21 +6,6 @@ import sys
 import wave
 import webrtcvad
 import pyaudio
-
-
-def read_wave(path):
-    """Reads a .wav file.
-    Takes the path, and returns (PCM audio data, sample rate).
-    """
-    with contextlib.closing(wave.open(path, 'rb')) as wf:
-        num_channels = wf.getnchannels()
-        assert num_channels == 1
-        sample_width = wf.getsampwidth()
-        assert sample_width == 2
-        sample_rate = wf.getframerate()
-        assert sample_rate in (8000, 16000, 32000, 48000)
-        pcm_data = wf.readframes(wf.getnframes())
-        return pcm_data, sample_rate
 
 
 def write_wave(path, audio, sample_rate):
@@ -55,7 +39,6 @@ def frame_generator(frame_duration_ms, audio, sample_rate):
     timestamp = 0.0
     duration = (float(n) / sample_rate) / 2.0
     while offset + n < len(audio):
-        print("ts:%f dur:%f" % (timestamp, duration))
         yield Frame(audio[offset:offset + n], timestamp, duration)
         timestamp += duration
         offset += n
@@ -178,16 +161,17 @@ def main():
 
     vad = webrtcvad.Vad(3)
 
-    print("len:%d" % len(audio))
-
     frames = frame_generator(30, audio, sample_rate)
-    print(frames)
     frames = list(frames)
-    print(frames)
     segments = vad_collector(sample_rate, 30, 300, vad, frames)
 
     # Segmenting the Voice audio and save it in list as bytes
-    concataudio = [segment for segment in segments]
+    concataudio = []
+    for s in segments:
+        concataudio.append(s)
+        concataudio.append(bytes(len(s)))
+
+    #    concataudio = [segment for segment in segments]
 
     joinedaudio = b"".join(concataudio)
 
