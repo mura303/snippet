@@ -8,7 +8,6 @@ import wave
 import webrtcvad
 import pyaudio
 
-
 def read_wave(path):
     """Reads a .wav file.
     Takes the path, and returns (PCM audio data, sample rate).
@@ -54,6 +53,7 @@ def frame_generator(frame_duration_ms, audio, sample_rate):
     timestamp = 0.0
     duration = (float(n) / sample_rate) / 2.0
     while offset + n < len(audio):
+        print( "ts:%f dur:%f" % (timestamp, duration ))
         yield Frame(audio[offset:offset + n], timestamp, duration)
         timestamp += duration
         offset += n
@@ -130,16 +130,57 @@ def vad_collector(sample_rate, frame_duration_ms,
     if voiced_frames:
         yield b''.join([f.bytes for f in voiced_frames])
 
+def record_audio():
+    chunk = 1024 # Record in chunks of 1024 samples
+    sample_format = pyaudio.paInt16  # 16 bits per sample
+    channels = 1
+    fs = 32000  # Record at 44100 samples per second
+    seconds = 50
 
-def main(args):
-    if len(args) != 2:
-        sys.stderr.write(
-            'Usage: silenceremove.py <aggressiveness> <path to wav file>\n')
-        sys.exit(1)
-    audio, sample_rate = read_wave(args[1])
-    vad = webrtcvad.Vad(int(args[0]))
+    p = pyaudio.PyAudio()  # Create an interface to PortAudio
+
+    print('Recording')
+
+    stream = p.open(format=sample_format,
+                    channels=channels,
+                    rate=fs,
+                    frames_per_buffer=chunk,
+                    input=True)
+
+    wavdata = []  # Initialize array to store frames
+
+    # Store data in chunks for 3 seconds
+    for i in range(0, int(fs / chunk * seconds)):
+        data = stream.read(chunk)
+        wavdata.append(data)
+
+    # Stop and close the stream 
+    stream.stop_stream()
+    stream.close()
+    # Terminate the PortAudio interface
+    p.terminate()
+
+    print('Finished recording')
+    return b''.join(wavdata)
+
+def main():
+
+    sample_rate = 32000
+
+ #   audio, sample_rate = read_wave("mono32k.wav")
+
+    audio = record_audio()
+
+ #   import pdb; pdb.set_trace()
+
+    vad = webrtcvad.Vad(3)
+
+    print( "len:%d" % len(audio))
+
     frames = frame_generator(30, audio, sample_rate)
+    print(frames)
     frames = list(frames)
+    print(frames)
     segments = vad_collector(sample_rate, 30, 300, vad, frames)
 
     # Segmenting the Voice audio and save it in list as bytes
@@ -156,4 +197,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()

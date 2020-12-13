@@ -1,2 +1,9 @@
 
 powershell/.vs
+python/audio/.idea/audio.iml
+python/audio/.idea/inspectionProfiles/profiles_settings.xml
+python/audio/.idea/misc.xml
+python/audio/.idea/modules.xml
+python/audio/.idea/vcs.xml
+python/audio/.idea/workspace.xml
+*.wav

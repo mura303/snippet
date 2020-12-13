@@ -136,6 +136,9 @@ def main(args):
             'Usage: silenceremove.py <aggressiveness> <path to wav file>\n')
         sys.exit(1)
     audio, sample_rate = read_wave(args[1])
+
+    # import ipdb; ipdb.set_trace()
+
     vad = webrtcvad.Vad(int(args[0]))
     frames = frame_generator(30, audio, sample_rate)
     frames = list(frames)
